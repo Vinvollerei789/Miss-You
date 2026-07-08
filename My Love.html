@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>simulasi_dialog_romantis.py</title>
+    <style>
+         :root {
+            --ink: #1b1622;
+            --panel: #251e2e;
+            --panel-alt: #211a29;
+            --panel-line: #362c43;
+            --accent-rose: #ff8577;
+            --accent-gold: #e8bd6b;
+            --text-warm: #f3e9dd;
+            --text-muted: #6f6580;
+            --font-serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
+            --font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+        }
+        
+        * {
+            box-sizing: border-box;
+        }
+        
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            background: radial-gradient(ellipse at top, #241c2c 0%, var(--ink) 65%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 28px 16px;
+            font-family: var(--font-mono);
+            color: var(--text-warm);
+        }
+        
+        .editor {
+            width: 100%;
+            max-width: 620px;
+            background: var(--panel);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--panel-line);
+        }
+        
+        .titlebar {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 13px 16px;
+            background: var(--panel-alt);
+            border-bottom: 1px solid var(--panel-line);
+        }
+        
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        
+        .dot.red {
+            background: #ff5f57;
+        }
+        
+        .dot.yellow {
+            background: #febc2e;
+        }
+        
+        .dot.green {
+            background: #28c840;
+        }
+        
+        .filename {
+            margin-left: 8px;
+            font-size: 12.5px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--accent-rose);
+            opacity: 0;
+            transition: opacity 0.3s;
+            flex-shrink: 0;
+        }
+        
+        .status-dot.live {
+            opacity: 1;
+            animation: pulseDot 1.5s infinite;
+        }
+        
+        @keyframes pulseDot {
+            0%,
+            100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.35;
+            }
+        }
+        
+        .pane {
+            padding: 26px 22px;
+            min-height: 300px;
+            max-height: 58vh;
+            overflow-y: auto;
+        }
+        
+        .comment {
+            color: var(--text-muted);
+            font-size: 13.5px;
+            margin-bottom: 16px;
+        }
+        
+        .code-line {
+            font-size: 15px;
+            margin-bottom: 22px;
+            display: flex;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 1px;
+        }
+        
+        .kw {
+            color: var(--text-warm);
+        }
+        
+        .str-quote {
+            color: var(--accent-gold);
+        }
+        
+        .inline-input {
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid var(--panel-line);
+            color: var(--accent-gold);
+            font-family: var(--font-mono);
+            font-size: 15px;
+            padding: 2px 3px;
+            min-width: 150px;
+            outline: none;
+        }
+        
+        .inline-input:focus {
+            border-bottom-color: var(--accent-rose);
+        }
+        
+        .inline-input::placeholder {
+            color: #55495f;
+        }
+        
+        .run-btn {
+            background: none;
+            border: 1px solid var(--panel-line);
+            color: var(--accent-rose);
+            font-family: var(--font-mono);
+            font-size: 13.5px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .run-btn:hover {
+            background: rgba(255, 133, 119, 0.08);
+            border-color: var(--accent-rose);
+        }
+        
+        .run-btn:active {
+            transform: scale(0.98);
+        }
+        
+        .line {
+            display: flex;
+            gap: 14px;
+            padding: 3px 0;
+            animation: lineIn 0.35s ease;
+        }
+        
+        @keyframes lineIn {
+            from {
+                opacity: 0;
+                transform: translateY(4px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .line-no {
+            color: #4a4056;
+            font-size: 12px;
+            width: 20px;
+            text-align: right;
+            flex-shrink: 0;
+            padding-top: 4px;
+            user-select: none;
+        }
+        
+        .line-content {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .speaker {
+            font-size: 12px;
+            font-family: var(--font-mono);
+            margin-bottom: 3px;
+        }
+        
+        .speaker.you {
+            color: var(--accent-gold);
+        }
+        
+        .speaker.partner {
+            color: var(--accent-rose);
+        }
+        
+        .speech {
+            font-family: var(--font-serif);
+            font-size: 16.5px;
+            line-height: 1.55;
+            color: var(--text-warm);
+        }
+        
+        .cursor-line {
+            display: flex;
+            gap: 14px;
+            padding: 3px 0;
+        }
+        
+        .cursor-blink {
+            display: inline-block;
+            width: 8px;
+            height: 16px;
+            background: var(--text-muted);
+            margin-top: 4px;
+            animation: blink 1s step-start infinite;
+        }
+        
+        @keyframes blink {
+            50% {
+                opacity: 0;
+            }
+        }
+        
+        .controls {
+            border-top: 1px solid var(--panel-line);
+            padding: 16px 20px;
+            background: var(--panel-alt);
+        }
+        
+        .override-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13.5px;
+            margin-bottom: 12px;
+            color: var(--text-muted);
+        }
+        
+        .override-row .inline-input {
+            flex: 1;
+            min-width: 0;
+            font-size: 13.5px;
+        }
+        
+        .btn-row {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .fn-btn {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            background: none;
+            border: 1px solid var(--panel-line);
+            color: var(--text-warm);
+            padding: 9px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .fn-btn:hover {
+            border-color: var(--accent-rose);
+            color: var(--accent-rose);
+        }
+        
+        .fn-btn.primary {
+            color: var(--accent-rose);
+            border-color: rgba(255, 133, 119, 0.3);
+        }
+        
+        .fn-btn.primary:hover {
+            background: rgba(255, 133, 119, 0.08);
+        }
+        
+        .docblock {
+            font-family: var(--font-serif);
+            font-size: 16px;
+            line-height: 1.8;
+            color: var(--text-warm);
+            padding: 10px 0 4px 34px;
+            border-left: 2px solid var(--panel-line);
+            margin: 4px 0 4px 10px;
+        }
+        
+        .docblock .quote-mark {
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+            font-size: 14px;
+        }
+        
+        .heart-line {
+            color: var(--accent-rose);
+            font-size: 18px;
+            margin-top: 12px;
+            animation: heartGlow 2.2s ease-in-out infinite;
+        }
+        
+        @keyframes heartGlow {
+            0%,
+            100% {
+                text-shadow: 0 0 0 rgba(255, 133, 119, 0);
+            }
+            50% {
+                text-shadow: 0 0 16px rgba(255, 133, 119, 0.5);
+            }
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        button:focus-visible,
+        input:focus-visible {
+            outline: 2px solid var(--accent-rose);
+            outline-offset: 2px;
+        }
+        
+         ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+         ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+         ::-webkit-scrollbar-thumb {
+            background: var(--panel-line);
+            border-radius: 4px;
+        }
+        
+        @media (max-width: 480px) {
+            .pane {
+                padding: 18px 14px;
+            }
+            .speech {
+                font-size: 15.5px;
+            }
+            .code-line {
+                font-size: 14px;
+            }
+            .inline-input {
+                min-width: 110px;
+                font-size: 14px;
+            }
+            .docblock {
+                padding-left: 22px;
+                margin-left: 2px;
+            }
+            .line {
+                gap: 10px;
+            }
+            .line-no {
+                width: 16px;
+            }
+        }
+        
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="editor">
+        <div class="titlebar">
+            <span class="dot red"></span>
+            <span class="dot yellow"></span>
+            <span class="dot green"></span>
+            <span class="filename">
+      <span id="fname">simulasi_dialog_romantis.py</span>
+            <span class="status-dot" id="statusDot"></span>
+            </span>
+        </div>
+
+        <div class="pane" id="pane">
+            <div id="start-block">
+                <div class="comment"># masukkan nama pasanganmu untuk memulai</div>
+                <div class="code-line">
+                    <span class="kw">nama_pasangan</span>&nbsp;=&nbsp;<span class="str-quote">"</span><input type="text" id="nama-input" class="inline-input" placeholder="ketik nama..." maxlength="24"><span class="str-quote">"</span>
+                </div>
+                <button class="run-btn" id="run-btn">&#9654; jalankan_simulasi()</button>
+            </div>
+
+            <div id="output" class="hidden"></div>
+        </div>
+
+        <div class="controls hidden" id="controls">
+            <div class="override-row" id="override-row">
+                <span>kamu.tulis(</span>
+                <input type="text" id="custom-input" class="inline-input" placeholder='"opsional..."'>
+                <span>)</span>
+            </div>
+            <div class="btn-row">
+                <button class="fn-btn primary" id="lanjut-btn">lanjutkan()</button>
+                <button class="fn-btn" id="keluar-btn">keluar()</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            var dialogTemplates = [
+                "Hai {nama}, apa kabar hari ini?",
+                "Aku sangat merindukanmu.",
+                "{nama}, menurutku kamu adalah orang paling istimewa di dunia.",
+                "Setiap kali aku menulis kode, aku selalu teringat padamu.",
+                "Menurutmu, kita seperti apa dalam bahasa pemrograman, {nama}?"
+            ];
+            var responses = [
+                "Aku baik-baik saja, bagaimana denganmu?",
+                "Aku juga sangat merindukanmu!",
+                "Aww, kamu sangat manis. Kamu juga istimewa bagiku.",
+                "Benarkah? Itu sangat romantis!",
+                "Hmm, mungkin seperti Python dan Django? Selalu cocok bersama!"
+            ];
+
+            var nama = "";
+            var index = 0;
+            var lineCount = 0;
+
+            var startBlock = document.getElementById('start-block');
+            var namaInput = document.getElementById('nama-input');
+            var runBtn = document.getElementById('run-btn');
+            var output = document.getElementById('output');
+            var pane = document.getElementById('pane');
+            var controls = document.getElementById('controls');
+            var overrideRow = document.getElementById('override-row');
+            var customInput = document.getElementById('custom-input');
+            var lanjutBtn = document.getElementById('lanjut-btn');
+            var keluarBtn = document.getElementById('keluar-btn');
+            var statusDot = document.getElementById('statusDot');
+            var fname = document.getElementById('fname');
+
+            function pad(n) {
+                return n < 10 ? '0' + n : '' + n;
+            }
+
+            function scrollDown() {
+                pane.scrollTop = pane.scrollHeight;
+            }
+
+            function addPendingLine() {
+                lineCount++;
+                var row = document.createElement('div');
+                row.className = 'cursor-line';
+                row.id = 'pending-line';
+
+                var lineNo = document.createElement('span');
+                lineNo.className = 'line-no';
+                lineNo.textContent = pad(lineCount);
+
+                var cursor = document.createElement('span');
+                cursor.className = 'cursor-blink';
+
+                row.appendChild(lineNo);
+                row.appendChild(cursor);
+                output.appendChild(row);
+                scrollDown();
+            }
+
+            function resolveLine(speakerLabel, speakerClass, text) {
+                var pending = document.getElementById('pending-line');
+                if (pending) pending.remove();
+
+                var row = document.createElement('div');
+                row.className = 'line';
+
+                var lineNo = document.createElement('span');
+                lineNo.className = 'line-no';
+                lineNo.textContent = pad(lineCount);
+
+                var content = document.createElement('div');
+                content.className = 'line-content';
+
+                var speaker = document.createElement('div');
+                speaker.className = 'speaker ' + speakerClass;
+                speaker.textContent = speakerLabel;
+
+                var speech = document.createElement('div');
+                speech.className = 'speech';
+                speech.textContent = text;
+
+                content.appendChild(speaker);
+                content.appendChild(speech);
+                row.appendChild(lineNo);
+                row.appendChild(content);
+                output.appendChild(row);
+                scrollDown();
+            }
+
+            function playUserLine() {
+                var text = dialogTemplates[index].replace(/\{nama\}/g, nama);
+                addPendingLine();
+                setTimeout(function() {
+                    resolveLine('Kamu', 'you', text);
+                    if (index < dialogTemplates.length - 1) {
+                        showControls('after-user');
+                    } else {
+                        setTimeout(playPartnerLine, 600);
+                    }
+                }, 900);
+            }
+
+            function playPartnerLine() {
+                addPendingLine();
+                setTimeout(function() {
+                    resolveLine(nama, 'partner', responses[index]);
+                    if (index < dialogTemplates.length - 1) {
+                        showControls('after-partner');
+                    } else {
+                        setTimeout(finish, 900);
+                    }
+                }, 900);
+            }
+
+            function showControls(stage) {
+                controls.classList.remove('hidden');
+                if (stage === 'after-user') {
+                    overrideRow.classList.remove('hidden');
+                    customInput.value = '';
+                } else {
+                    overrideRow.classList.add('hidden');
+                }
+                lanjutBtn.dataset.stage = stage;
+            }
+
+            function hideControls() {
+                controls.classList.add('hidden');
+            }
+
+            function finish() {
+                hideControls();
+                statusDot.classList.remove('live');
+                fname.textContent = 'simulasi_dialog_romantis.py';
+
+                var row = document.createElement('div');
+                row.className = 'docblock';
+
+                var openQuote = document.createElement('div');
+                openQuote.className = 'quote-mark';
+                openQuote.textContent = '"""';
+                row.appendChild(openQuote);
+
+                var p1 = document.createElement('div');
+                p1.textContent = 'Aku harap suatu hari kita bisa memiliki percakapan seperti ini secara nyata.';
+                row.appendChild(p1);
+
+                var p2 = document.createElement('div');
+                p2.textContent = "Tapi untuk sekarang, aku senang bisa 'berbicara' denganmu melalui kode ini.";
+                row.appendChild(p2);
+
+                var heart = document.createElement('div');
+                heart.className = 'heart-line';
+                heart.textContent = '\u2764 Aku menyayangimu, ' + nama + ' \u2764';
+                row.appendChild(heart);
+
+                var closeQuote = document.createElement('div');
+                closeQuote.className = 'quote-mark';
+                closeQuote.textContent = '"""';
+                row.appendChild(closeQuote);
+
+                output.appendChild(row);
+
+                var restartWrap = document.createElement('div');
+                restartWrap.style.marginTop = '18px';
+                var restartBtn = document.createElement('button');
+                restartBtn.className = 'fn-btn primary';
+                restartBtn.id = 'restart-btn';
+                restartBtn.textContent = '\u21BB ulangi()';
+                restartBtn.addEventListener('click', restart);
+                restartWrap.appendChild(restartBtn);
+                output.appendChild(restartWrap);
+
+                scrollDown();
+            }
+
+            function restart() {
+                output.innerHTML = '';
+                output.classList.add('hidden');
+                startBlock.classList.remove('hidden');
+                hideControls();
+                namaInput.value = '';
+                namaInput.placeholder = 'ketik nama...';
+                namaInput.style.borderBottomColor = '';
+                index = 0;
+                lineCount = 0;
+                namaInput.focus();
+            }
+
+            function startSimulation() {
+                var val = namaInput.value.trim();
+                if (!val) {
+                    namaInput.style.borderBottomColor = '#ff5f57';
+                    namaInput.placeholder = 'isi dulu ya...';
+                    namaInput.focus();
+                    return;
+                }
+                nama = val;
+                startBlock.classList.add('hidden');
+                output.classList.remove('hidden');
+                statusDot.classList.add('live');
+                fname.textContent = 'simulasi_dialog_romantis.py \u2014 running';
+                index = 0;
+                lineCount = 0;
+                playUserLine();
+            }
+
+            runBtn.addEventListener('click', startSimulation);
+            namaInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') startSimulation();
+            });
+            customInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') lanjutBtn.click();
+            });
+
+            lanjutBtn.addEventListener('click', function() {
+                var stage = lanjutBtn.dataset.stage;
+                hideControls();
+                if (stage === 'after-user') {
+                    var custom = customInput.value.trim();
+                    if (custom) {
+                        addPendingLine();
+                        setTimeout(function() {
+                            resolveLine('Kamu', 'you', custom);
+                            setTimeout(playPartnerLine, 500);
+                        }, 700);
+                    } else {
+                        playPartnerLine();
+                    }
+                } else {
+                    index++;
+                    playUserLine();
+                }
+            });
+
+            keluarBtn.addEventListener('click', finish);
+        })();
+    </script>
+
+</body>
+
+</html>
